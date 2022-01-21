@@ -51,7 +51,7 @@ type pagerDutyIncidentNotifier struct {
 }
 
 const (
-	pagerDutyAPITokenSecretName = "pagerdutyAPIToken"
+	pagerDutyAPITokenSecretName = "pagerDutyAPIToken"
 )
 
 func main() {

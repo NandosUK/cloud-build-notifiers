@@ -17,20 +17,20 @@ steps:
 - name: gcr.io/cloud-builders/docker
   args:
   - build
-  - --tag=${_REGISTRY}/pagerduty-incident:${TAG_NAME}
-  - --tag=${_REGISTRY}/pagerduty-incident:latest
-  - --file=./pagerduty-incident/Dockerfile
+  - --tag=${_REGISTRY}/pagerduty:${TAG_NAME}
+  - --tag=${_REGISTRY}/pagerduty:latest
+  - --file=./pagerduty/Dockerfile
   - '.'
 # Run the smoketest to verify that everything built correctly.
-- name: ${_REGISTRY}/pagerduty-incident:${TAG_NAME}
+- name: ${_REGISTRY}/pagerduty:${TAG_NAME}
   args:
   - --smoketest
   - --alsologtostderr
 
 # Push the image with tags.
 images:
-- ${_REGISTRY}/pagerduty-incident:${TAG_NAME}
-- ${_REGISTRY}/pagerduty-incident:latest
+- ${_REGISTRY}/pagerduty:${TAG_NAME}
+- ${_REGISTRY}/pagerduty:latest
 
 options:
   dynamic_substitutions: true
@@ -39,4 +39,4 @@ substitutions:
   _REGISTRY: us-east1-docker.pkg.dev/gcb-release/cloud-build-notifiers
 
 tags:
-- cloud-build-notifiers-pagerduty-incident
+- cloud-build-notifiers-pagerduty
