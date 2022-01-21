@@ -14,8 +14,8 @@
 
 FROM golang AS build-env
 COPY . /go-src/
-WORKDIR /go-src/pagerduty-incident
-RUN go test /go-src/pagerduty-incident
+WORKDIR /go-src/pagerduty
+RUN go test /go-src/pagerduty
 RUN go build -o /go-app .
 
 # From the Cloud Run docs:
