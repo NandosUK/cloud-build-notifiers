@@ -48,10 +48,12 @@ type pagerDutyIncidentNotifier struct {
 	apiToken      string
 	serviceID     string
 	incidentTitle string
+	fromEmail     string
 }
 
 const (
-	pagerDutyAPITokenSecretName = "pagerDutyAPIToken"
+	pagerDutyAPITokenSecretName  = "pagerDutyAPIToken"
+	pagerDutyFromEmailSecretName = "pagerDutyFromEmail"
 )
 
 func main() {
@@ -99,6 +101,21 @@ func (h *pagerDutyIncidentNotifier) SetUp(ctx context.Context, cfg *notifiers.Co
 	}
 	h.apiToken = wu
 
+	wuRef, err = notifiers.GetSecretRef(cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName)
+	if err != nil {
+		return fmt.Errorf("failed to get Secret ref from delivery config (%v) field %q: %w", cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName, err)
+	}
+	wuResource, err = notifiers.FindSecretResourceName(cfg.Spec.Secrets, wuRef)
+	if err != nil {
+		return fmt.Errorf("failed to find Secret for ref %q: %w", wuRef, err)
+	}
+	wu, err = sg.GetSecret(ctx, wuResource)
+	if err != nil {
+		return fmt.Errorf("failed to get token secret: %w", err)
+	}
+
+	h.fromEmail = wu
+
 	return nil
 }
 
@@ -138,6 +155,7 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 	req.Header.Set("User-Agent", "GCB-Notifier/0.1 (http)")
 	req.Header.Set("Authorization", fmt.Sprintf("Token token=%s", h.apiToken))
 	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
+	req.Header.Set("From", h.fromEmail)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

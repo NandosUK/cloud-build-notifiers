@@ -11,6 +11,10 @@ spec:
       serviceID: "ABC1234"
       pagerDutyAPIToken:
         secretRef: pagerduty-api-token
+      pagerDutyFromEmail:
+        secretRef: pagerduty-from-email
   secrets:
   - name: pagerduty-api-token
-    value: projects/some_project_ref_1234/secrets/secret_name_goes_here/versions/latest
+    value: projects/some_project_ref_1234/secrets/api_token_secret_name_goes_here/versions/latest
+  - name: pagerduty-from-email
+    value: projects/some_project_ref_1234/secrets/from_email_secret_name_goes_here/versions/latest
