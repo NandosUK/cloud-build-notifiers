@@ -157,6 +157,10 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
 	req.Header.Set("From", h.fromEmail)
 
+	for key, header := range req.Header {
+		log.Info(key, header)
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to make HTTP request: %w", err)
