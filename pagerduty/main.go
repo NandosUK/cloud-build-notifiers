@@ -158,7 +158,7 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 	req.Header.Set("From", h.fromEmail)
 
 	for key, header := range req.Header {
-		log.Info("%s: %s", key, header)
+		log.Info(key, header)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
