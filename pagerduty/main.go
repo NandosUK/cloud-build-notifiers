@@ -101,9 +101,9 @@ func (h *pagerDutyIncidentNotifier) SetUp(ctx context.Context, cfg *notifiers.Co
 	}
 	h.apiToken = tokenSecret
 
-	fromSecretRef, err := notifiers.GetSecretRef(cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName)
+	fromSecretRef, err := notifiers.GetSecretRef(cfg.Spec.Notification.Delivery, pagerDutyFromEmailSecretName)
 	if err != nil {
-		return fmt.Errorf("failed to get Secret ref from delivery config (%v) field %q: %w", cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName, err)
+		return fmt.Errorf("failed to get Secret ref from delivery config (%v) field %q: %w", cfg.Spec.Notification.Delivery, pagerDutyFromEmailSecretName, err)
 	}
 	fromSecretResource, err := notifiers.FindSecretResourceName(cfg.Spec.Secrets, fromSecretRef)
 	if err != nil {
