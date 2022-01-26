@@ -87,34 +87,34 @@ func (h *pagerDutyIncidentNotifier) SetUp(ctx context.Context, cfg *notifiers.Co
 	}
 	h.incidentTitle = incidentTitle
 
-	wuRef, err := notifiers.GetSecretRef(cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName)
+	tokenSecretRef, err := notifiers.GetSecretRef(cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to get Secret ref from delivery config (%v) field %q: %w", cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName, err)
 	}
-	wuResource, err := notifiers.FindSecretResourceName(cfg.Spec.Secrets, wuRef)
+	tokenSecretResource, err := notifiers.FindSecretResourceName(cfg.Spec.Secrets, tokenSecretRef)
 	if err != nil {
-		return fmt.Errorf("failed to find Secret for ref %q: %w", wuRef, err)
+		return fmt.Errorf("failed to find Secret for ref %q: %w", tokenSecretRef, err)
 	}
-	wu, err := sg.GetSecret(ctx, wuResource)
+	tokenSecret, err := sg.GetSecret(ctx, tokenSecretResource)
 	if err != nil {
 		return fmt.Errorf("failed to get token secret: %w", err)
 	}
-	h.apiToken = wu
+	h.apiToken = tokenSecret
 
-	wuRef, err = notifiers.GetSecretRef(cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName)
+	fromSecretRef, err := notifiers.GetSecretRef(cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to get Secret ref from delivery config (%v) field %q: %w", cfg.Spec.Notification.Delivery, pagerDutyAPITokenSecretName, err)
 	}
-	wuResource, err = notifiers.FindSecretResourceName(cfg.Spec.Secrets, wuRef)
+	fromSecretResource, err := notifiers.FindSecretResourceName(cfg.Spec.Secrets, fromSecretRef)
 	if err != nil {
-		return fmt.Errorf("failed to find Secret for ref %q: %w", wuRef, err)
+		return fmt.Errorf("failed to find Secret for ref %q: %w", fromSecretRef, err)
 	}
-	wu, err = sg.GetSecret(ctx, wuResource)
+	fromSecret, err := sg.GetSecret(ctx, fromSecretResource)
 	if err != nil {
 		return fmt.Errorf("failed to get token secret: %w", err)
 	}
 
-	h.fromEmail = wu
+	h.fromEmail = fromSecret
 
 	return nil
 }
