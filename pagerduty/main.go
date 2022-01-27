@@ -34,11 +34,17 @@ type pagerDutyIncident struct {
 	IncidentType string           `json:"type"`
 	Title        string           `json:"title"`
 	Service      pagerDutyService `json:"service"`
+	Body         pagerDutyBody    `json:"body"`
 }
 
 type pagerDutyService struct {
 	ID          string `json:"id"`
 	ServiceType string `json:"type"`
+}
+
+type pagerDutyBody struct {
+	Type    string `json:"type"`
+	Details string `json:"details"`
 }
 
 type pagerDutyIncidentNotifier struct {
@@ -137,6 +143,10 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 				Service: pagerDutyService{
 					ID:          h.serviceID,
 					ServiceType: "service_reference",
+				},
+				Body: pagerDutyBody{
+					Type:    "incident_body",
+					Details: fmt.Sprintf("Failing build can be found at https://console.cloud.google.com/cloud-build/builds/%s?project=%s", build.Id, build.ProjectId),
 				},
 			},
 		},
