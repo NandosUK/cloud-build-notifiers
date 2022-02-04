@@ -26,40 +26,34 @@ import (
 	cbpb "google.golang.org/genproto/googleapis/devtools/cloudbuild/v1"
 )
 
-type pagerDutyIncidentBody struct {
-	Incident pagerDutyIncident `json:"incident"`
+type pagerDutyEvent struct {
+	Payload     pagerDutyPayload `json:"payload"`
+	RoutingKey  string           `json:"routing_key"`
+	EventAction string           `json:"event_action"`
+	Links       []pagerDutyLink  `json:"links"`
 }
 
-type pagerDutyIncident struct {
-	IncidentType string           `json:"type"`
-	Title        string           `json:"title"`
-	Service      pagerDutyService `json:"service"`
-	Body         pagerDutyBody    `json:"body"`
+type pagerDutyPayload struct {
+	Summary  string `json:"summary"`
+	Severity string `json:"severity"`
+	Source   string `json:"source"`
 }
 
-type pagerDutyService struct {
-	ID          string `json:"id"`
-	ServiceType string `json:"type"`
-}
-
-type pagerDutyBody struct {
-	Type    string `json:"type"`
-	Details string `json:"details"`
+type pagerDutyLink struct {
+	Href string `json:"href"`
+	Text string `json:"text"`
 }
 
 type pagerDutyIncidentNotifier struct {
 	filter notifiers.EventFilter
 
-	endpoint      string
-	apiToken      string
-	serviceID     string
-	incidentTitle string
-	fromEmail     string
+	incidentTitle  string
+	integrationKey string
 }
 
 const (
-	pagerDutyAPITokenSecretName  = "pagerDutyAPIToken"
-	pagerDutyFromEmailSecretName = "pagerDutyFromEmail"
+	pagerDutyIntegrationKeyName  = "integrationKey"
+	pagerDutyEventsAPIV2Endpoint = "https://events.pagerduty.com/v2/enqueue"
 )
 
 func main() {
@@ -94,35 +88,17 @@ func (h *pagerDutyIncidentNotifier) SetUp(ctx context.Context, cfg *notifiers.Co
 	}
 	h.filter = prd
 
-	endpoint, ok := cfg.Spec.Notification.Delivery["incidentCreationEndpoint"].(string)
-	if !ok {
-		return fmt.Errorf("expected delivery config %v to have string field `endpoint`", cfg.Spec.Notification.Delivery)
-	}
-	h.endpoint = endpoint
-
-	serviceID, ok := cfg.Spec.Notification.Delivery["serviceID"].(string)
-	if !ok {
-		return fmt.Errorf("expected delivery config %v to have string field `serviceID`", cfg.Spec.Notification.Delivery)
-	}
-	h.serviceID = serviceID
-
 	incidentTitle, ok := cfg.Spec.Notification.Delivery["incidentTitle"].(string)
 	if !ok {
 		return fmt.Errorf("expected delivery config %v to have string field `incidentTitle`", cfg.Spec.Notification.Delivery)
 	}
 	h.incidentTitle = incidentTitle
 
-	token, err := getSecret(ctx, cfg, sg, pagerDutyAPITokenSecretName)
+	key, err := getSecret(ctx, cfg, sg, pagerDutyIntegrationKeyName)
 	if err != nil {
 		return err
 	}
-	h.apiToken = token
-
-	fromEmail, err := getSecret(ctx, cfg, sg, pagerDutyFromEmailSecretName)
-	if err != nil {
-		return err
-	}
-	h.fromEmail = fromEmail
+	h.integrationKey = key
 
 	return nil
 }
@@ -136,17 +112,17 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 	log.Infof("reporting an incident for event (build id = %s, status = %s)", build.Id, build.Status)
 
 	requestBody, err := json.Marshal(
-		pagerDutyIncidentBody{
-			Incident: pagerDutyIncident{
-				IncidentType: "incident",
-				Title:        h.incidentTitle,
-				Service: pagerDutyService{
-					ID:          h.serviceID,
-					ServiceType: "service_reference",
-				},
-				Body: pagerDutyBody{
-					Type:    "incident_body",
-					Details: fmt.Sprintf("Failing build can be found at https://console.cloud.google.com/cloud-build/builds/%s?project=%s", build.Id, build.ProjectId),
+		pagerDutyEvent{
+			Payload: pagerDutyPayload{
+				Summary:  h.incidentTitle,
+				Severity: "critical",
+				Source:   fmt.Sprintf("https://console.cloud.google.com/cloud-build/builds/%s?project=%s", build.Id, build.ProjectId),
+			},
+			RoutingKey: h.integrationKey,
+			Links: []pagerDutyLink{
+				{
+					Href: build.LogUrl,
+					Text: "Failing build logs",
 				},
 			},
 		},
@@ -158,16 +134,13 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 
 	log.Infof("incident request body: %v", string(requestBody))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.endpoint, bytes.NewReader(requestBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, pagerDutyEventsAPIV2Endpoint, bytes.NewReader(requestBody))
 	if err != nil {
 		return fmt.Errorf("failed to create a new HTTP request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "GCB-Notifier/0.1 (http)")
-	req.Header.Set("Authorization", fmt.Sprintf("Token token=%s", h.apiToken))
-	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
-	req.Header.Set("From", h.fromEmail)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -176,7 +149,7 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		log.Warningf("got a non-OK response status %q (%d) from %q", resp.Status, resp.StatusCode, h.endpoint)
+		log.Warningf("got a non-OK response status %q (%d) from %q", resp.Status, resp.StatusCode, pagerDutyEventsAPIV2Endpoint)
 	}
 
 	log.V(2).Infoln("send HTTP request successfully")
