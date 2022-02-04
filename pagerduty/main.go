@@ -118,7 +118,8 @@ func (h *pagerDutyIncidentNotifier) SendNotification(ctx context.Context, build 
 				Severity: "critical",
 				Source:   fmt.Sprintf("https://console.cloud.google.com/cloud-build/builds/%s?project=%s", build.Id, build.ProjectId),
 			},
-			RoutingKey: h.integrationKey,
+			EventAction: "trigger",
+			RoutingKey:  h.integrationKey,
 			Links: []pagerDutyLink{
 				{
 					Href: build.LogUrl,
